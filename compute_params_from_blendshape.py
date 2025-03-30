@@ -1,7 +1,12 @@
 import math
 
-BLINK_THRESHOLD = 0.7
+BLINK_THRESHOLD = 0.4
+BLINK_SCALE = 0.0
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
+MOUTH_X_SCALE = 3.0
+MOUTH_OPEN_SCALE = 3.0
+MOUTH_SMILE_SCALE = 0.6
+MOUTH_SMILE_OFFSET = 0.4
 
 
 def append_request(request, id, value):
@@ -11,19 +16,20 @@ def append_request(request, id, value):
 def get_mouth_smile(blendshapes):
     smile = max(blendshapes["mouthSmileLeft"], blendshapes["mouthSmileRight"])
     frown = max(
-        blendshapes["mouthFrownLeft"], blendshapes["mouthFrownRight"]
-    )  # not getting values from this
-    return (smile) * 0.6 + 0.4
+        blendshapes["mouthPucker"], blendshapes["mouthShrugLower"]
+    )  # closest thing to frown that responds
+    return max((smile - frown) * MOUTH_SMILE_SCALE + MOUTH_SMILE_OFFSET, 0)
 
 
 def get_mouth_open(blendshapes):
-    return math.sqrt(blendshapes["jawOpen"])
+    return min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"], 1)
 
 
 def get_mouth_x(blendshapes):
     left = max(blendshapes["mouthLeft"], blendshapes["mouthPressLeft"])
     right = max(blendshapes["mouthRight"], blendshapes["mouthPressRight"])
-    return right - left
+    mouth_x = (right - left) * MOUTH_X_SCALE
+    return max(min(mouth_x, 1), -1)
 
 
 def get_brows(blendshapes):
@@ -63,7 +69,7 @@ def get_eye_open_left(blendshapes):
     squint = blendshapes["eyeSquintLeft"]
     blink = blendshapes["eyeBlinkLeft"]
     if blink > BLINK_THRESHOLD:
-        return (1 - blink) * 0.5
+        return (1 - blink) * BLINK_SCALE
     eye_open = squint * EYE_SQUINT_TO_OPEN_RATIO + 1
     return min(eye_open, 1)
 
@@ -72,7 +78,7 @@ def get_eye_open_right(blendshapes):
     squint = blendshapes["eyeSquintRight"]
     blink = blendshapes["eyeBlinkRight"]
     if blink > BLINK_THRESHOLD:
-        return (1 - blink) * 0.5
+        return (1 - blink) * BLINK_SCALE
     eye_open = squint * EYE_SQUINT_TO_OPEN_RATIO + 1
     return min(eye_open, 1)
 
@@ -109,6 +115,7 @@ def create_blendshapes_dict(blendshape_list):
 
 
 def compute_params_from_blendshapes(request, blendshape_list):
+    # Note left/right switched between mediapipe and vtube studio parameters
     blendshapes = create_blendshapes_dict(blendshape_list)
     # Face Position
     # Face Angle
@@ -119,26 +126,26 @@ def compute_params_from_blendshapes(request, blendshape_list):
     # Brows
     append_request(request, "Brows", get_brows(blendshapes))
     # BrowLeftY
-    append_request(request, "BrowLeftY", get_brows_left_y(blendshapes))
+    append_request(request, "BrowLeftY", get_brows_right_y(blendshapes))
     # BrowRightY
-    append_request(request, "BrowRightY", get_brows_right_y(blendshapes))
+    append_request(request, "BrowRightY", get_brows_left_y(blendshapes))
     # EyeOpenLeft
-    append_request(request, "EyeOpenLeft", get_eye_open_left(blendshapes))
+    append_request(request, "EyeOpenLeft", get_eye_open_right(blendshapes))
     # EyeOpenRight
-    append_request(request, "EyeOpenRight", get_eye_open_right(blendshapes))
+    append_request(request, "EyeOpenRight", get_eye_open_left(blendshapes))
     # EyeLeftX
-    append_request(request, "EyeLeftX", get_eye_left_x(blendshapes))
+    append_request(request, "EyeLeftX", get_eye_right_x(blendshapes))
     # EyeLeftY
-    append_request(request, "EyeLeftY", get_eye_left_y(blendshapes))
+    append_request(request, "EyeLeftY", get_eye_right_y(blendshapes))
     # EyeRightX
-    append_request(request, "EyeRightX", get_eye_right_x(blendshapes))
+    append_request(request, "EyeRightX", get_eye_left_x(blendshapes))
     # EyeRightY
-    append_request(request, "EyeRightY", get_eye_right_y(blendshapes))
+    append_request(request, "EyeRightY", get_eye_left_y(blendshapes))
 
     # Custom
     # lilac_MouthX
     append_request(request, "lilac_MouthX", get_mouth_x(blendshapes))
     # lilac_BrowsLeftForm
-    append_request(request, "lilac_BrowsLeftForm", get_brows_left_form(blendshapes))
+    append_request(request, "lilac_BrowsLeftForm", get_brows_right_form(blendshapes))
     # lilac_BrowsRightForm
-    append_request(request, "lilac_BrowsRightForm", get_brows_right_form(blendshapes))
+    append_request(request, "lilac_BrowsRightForm", get_brows_left_form(blendshapes))
