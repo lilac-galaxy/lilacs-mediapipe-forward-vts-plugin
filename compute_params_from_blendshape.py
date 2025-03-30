@@ -21,8 +21,8 @@ def get_mouth_open(blendshapes):
 
 
 def get_mouth_x(blendshapes):
-    left = blendshapes["mouthLeft"]
-    right = blendshapes["mouthRight"]
+    left = max(blendshapes["mouthLeft"], blendshapes["mouthPressLeft"])
+    right = max(blendshapes["mouthRight"], blendshapes["mouthPressRight"])
     return right - left
 
 
@@ -119,9 +119,9 @@ def compute_params_from_blendshapes(request, blendshape_list):
     # Brows
     append_request(request, "Brows", get_brows(blendshapes))
     # BrowLeftY
-    # append_request(request, "BrowLeftY", get_brows_left_y(blendshapes))
+    append_request(request, "BrowLeftY", get_brows_left_y(blendshapes))
     # BrowRightY
-    # append_request(request, "BrowRightY", get_brows_right_y(blendshapes))
+    append_request(request, "BrowRightY", get_brows_right_y(blendshapes))
     # EyeOpenLeft
     append_request(request, "EyeOpenLeft", get_eye_open_left(blendshapes))
     # EyeOpenRight

@@ -35,6 +35,9 @@ def get_args():
         help="mediapipe model file",
         default="face_landmarker_v2_with_blendshapes.task",
     )
+    parser.add_argument(
+        "--address", help="API address for VTube Studio", default="ws://localhost:8001"
+    )
     parser.add_argument("-c", "--camera", help="index of camera device", default=0)
     parser.add_argument("-W", "--width", help="width of camera image", default=1280)
     parser.add_argument("-H", "--height", help="height of camera image", default=720)
@@ -62,7 +65,7 @@ def main(auth_token, args):
 
     attempts = 0
 
-    with connect("ws://localhost:8001") as websocket:
+    with connect(args.address) as websocket:
         # authenticate session
         try:
             if auth_token == "":
@@ -98,24 +101,26 @@ def main(auth_token, args):
 
         detector = vision.FaceLandmarker.create_from_options(options)
         fps = capture.get(cv2.CAP_PROP_FPS)
-        wait_interval_ms = 1 / fps * 0.1 * 1000  # wait 10% of the time to get a frame
+        wait_interval_sec = 0.1 / fps  # wait 10% of the time to get a frame
 
-        while True:
-            # Load image
-            ret, cv2_image = capture.read()
+        try:
+            while True:
+                # Load image
+                ret, cv2_image = capture.read()
 
-            if ret:
-                attempts = 0
-                image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2_image)
-                timestamp = int(capture.get(cv2.CAP_PROP_POS_MSEC))
-                detector.detect_async(image, timestamp)
-            else:
-                attempts += 1
-                time.sleep(wait_interval_ms)
-            if attempts > 30:
-                print("Too many failed attempts, quitting")
-                break
-
+                if ret:
+                    attempts = 0
+                    image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2_image)
+                    timestamp = int(capture.get(cv2.CAP_PROP_POS_MSEC))
+                    detector.detect_async(image, timestamp)
+                else:
+                    attempts += 1
+                    time.sleep(wait_interval_sec)
+                if attempts > 30:
+                    print("Too many failed attempts, quitting")
+                    break
+        except KeyboardInterrupt:
+            print("Quitting")
     capture.release()
 
 
