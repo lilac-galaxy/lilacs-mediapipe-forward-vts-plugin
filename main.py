@@ -97,6 +97,8 @@ def main(auth_token, args):
         )
 
         detector = vision.FaceLandmarker.create_from_options(options)
+        fps = capture.get(cv2.CAP_PROP_FPS)
+        wait_interval_ms = 1 / fps * 0.1 * 1000  # wait 10% of the time to get a frame
 
         while True:
             # Load image
@@ -109,9 +111,7 @@ def main(auth_token, args):
                 detector.detect_async(image, timestamp)
             else:
                 attempts += 1
-                if cv2.waitKey(1) >= 0:
-                    print("waitKey surpassed")
-                    break
+                time.sleep(wait_interval_ms)
             if attempts > 30:
                 print("Too many failed attempts, quitting")
                 break

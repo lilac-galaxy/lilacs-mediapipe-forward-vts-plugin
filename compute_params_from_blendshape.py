@@ -1,6 +1,7 @@
 import math
 
 BLINK_THRESHOLD = 0.7
+EYE_SQUINT_TO_OPEN_RATIO = -0.2
 
 
 def append_request(request, id, value):
@@ -63,7 +64,8 @@ def get_eye_open_left(blendshapes):
     blink = blendshapes["eyeBlinkLeft"]
     if blink > BLINK_THRESHOLD:
         return (1 - blink) * 0.5
-    return min(1.9 * (1 - squint), 1)
+    eye_open = squint * EYE_SQUINT_TO_OPEN_RATIO + 1
+    return min(eye_open, 1)
 
 
 def get_eye_open_right(blendshapes):
@@ -71,7 +73,8 @@ def get_eye_open_right(blendshapes):
     blink = blendshapes["eyeBlinkRight"]
     if blink > BLINK_THRESHOLD:
         return (1 - blink) * 0.5
-    return min(1.9 * (1 - squint), 1)
+    eye_open = squint * EYE_SQUINT_TO_OPEN_RATIO + 1
+    return min(eye_open, 1)
 
 
 def get_eye_left_x(blendshapes):
