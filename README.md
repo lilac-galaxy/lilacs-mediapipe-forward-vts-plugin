@@ -14,6 +14,6 @@ run `python main.py` while an instance of vtube studio is open. VTube Studio wil
 
 ## Debug Visualizer
 
-There is also a `debug_visualizer.py` when this is run, it will display the current view from your webcam as well as a list of all of the blendshapes and their current values.
+There is also a `debug_visualize.py` when this is run, it will display the current view from your webcam as well as a list of all of the blendshapes and their current values.
 
 Currently this is a little laggy, but is serviceable enough for debugging what signals do and do not get picked up and to what magnitude
