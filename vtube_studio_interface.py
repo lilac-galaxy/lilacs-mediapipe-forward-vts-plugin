@@ -65,7 +65,7 @@ def send_detection_results(detection_result, websocket):
         "apiVersion": "1.0",
         "requestID": "lilacsMediaPipeForward",
         "messageType": "InjectParameterDataRequest",
-        "data": {"faceFound": False, "mode": "set", "parameterValues": []},
+        "data": {"faceFound": False, "mode": "add", "parameterValues": []},
     }
 
     face_blendshapes_list = detection_result.face_blendshapes

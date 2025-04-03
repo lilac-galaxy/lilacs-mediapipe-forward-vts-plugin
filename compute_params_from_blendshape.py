@@ -1,9 +1,10 @@
+import math
+
 BLINK_THRESHOLD = 0.4
 BLINK_SCALE = 0.0
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
 MOUTH_X_SCALE = 3.0
 MOUTH_OPEN_SCALE = 3.0
-MOUTH_SMILE_SCALE = 0.6
 MOUTH_SMILE_OFFSET = 0.4
 
 
@@ -16,11 +17,11 @@ def get_mouth_smile(blendshapes):
     frown = max(
         blendshapes["mouthPucker"], blendshapes["mouthShrugLower"]
     )  # closest thing to frown that responds
-    return max((smile - frown) * MOUTH_SMILE_SCALE + MOUTH_SMILE_OFFSET, 0)
+    return smile - frown
 
 
 def get_mouth_open(blendshapes):
-    return min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"], 1)
+    return math.sqrt(min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"], 1))
 
 
 def get_mouth_x(blendshapes):
@@ -83,7 +84,7 @@ def get_eye_open_right(blendshapes):
 
 def get_eye_left_x(blendshapes):
     eye_left = blendshapes["eyeLookOutLeft"]
-    eye_right = blendshapes["eyeLookInRight"]
+    eye_right = blendshapes["eyeLookInLeft"]
     return eye_left - eye_right
 
 
@@ -121,6 +122,12 @@ def compute_params_from_blendshapes(request, blendshape_list):
     append_request(request, "MouthSmile", get_mouth_smile(blendshapes))
     # MouthOpen
     append_request(request, "MouthOpen", get_mouth_open(blendshapes))
+    # Mouth Open + Volume
+    append_request(request, "VoiceVolumePlusMouthOpen", get_mouth_open(blendshapes))
+    # Mouth Smile + Volume Freq
+    append_request(
+        request, "VoiceFrequencyPlusMouthSmile", get_mouth_smile(blendshapes) * 0.5
+    )
     # Brows
     append_request(request, "Brows", get_brows(blendshapes))
     # BrowLeftY
