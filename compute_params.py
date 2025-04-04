@@ -1,4 +1,5 @@
 import math
+from scipy.spatial.transform import Rotation
 
 BLINK_THRESHOLD = 0.4
 BLINK_SCALE = 0.0
@@ -116,8 +117,6 @@ def create_blendshapes_dict(blendshape_list):
 def compute_params_from_blendshapes(request, blendshape_list):
     # Note left/right switched between mediapipe and vtube studio parameters
     blendshapes = create_blendshapes_dict(blendshape_list)
-    # Face Position
-    # Face Angle
     # MouthSmile
     append_request(request, "MouthSmile", get_mouth_smile(blendshapes))
     # MouthOpen
@@ -154,3 +153,19 @@ def compute_params_from_blendshapes(request, blendshape_list):
     append_request(request, "lilac_BrowsLeftForm", get_brows_right_form(blendshapes))
     # lilac_BrowsRightForm
     append_request(request, "lilac_BrowsRightForm", get_brows_left_form(blendshapes))
+
+
+def compute_params_from_matrix(request, isometry):
+    # Face Position
+    translation_vector = isometry[:3, 3]
+    append_request(request, "FacePositionX", -translation_vector[0])
+    append_request(request, "FacePositionY", translation_vector[1])
+    append_request(request, "FacePositionZ", -translation_vector[2])
+    # Face Angle
+    # Compute rotation from transform isometry matrix
+    rotation_matrix = isometry[:3, :3]
+    r = Rotation.from_matrix(rotation_matrix)
+    angles = r.as_euler("zyx", degrees=True)
+    append_request(request, "FaceAngleX", -angles[1])
+    append_request(request, "FaceAngleY", -angles[2])
+    append_request(request, "FaceAngleZ", angles[0])

@@ -1,10 +1,7 @@
 import json
 import sys
-from scipy.spatial.transform import Rotation
 
-from websockets.sync.client import connect
-
-from compute_params_from_blendshape import compute_params_from_blendshapes
+from compute_params import compute_params_from_blendshapes, compute_params_from_matrix
 
 
 def validate_connect_response(message_json):
@@ -75,13 +72,9 @@ def send_detection_results(detection_result, websocket):
     face_blendshapes = face_blendshapes_list[0]  # only care about a single face
     compute_params_from_blendshapes(request, face_blendshapes)
 
-    # Compute rotation from transform isometry matrix
-    rotation_matrix = detection_result.facial_transformation_matrixes[0][:3, :3]
-    r = Rotation.from_matrix(rotation_matrix)
-    angles = r.as_euler("zyx", degrees=True)
-    request["data"]["parameterValues"].append({"id": "FaceAngleX", "value": -angles[1]})
-    request["data"]["parameterValues"].append({"id": "FaceAngleY", "value": -angles[2]})
-    request["data"]["parameterValues"].append({"id": "FaceAngleZ", "value": angles[0]})
+    compute_params_from_matrix(
+        request, detection_result.facial_transformation_matrixes[0]
+    )
 
     # only write if there are parameters to set
     if len(request["data"]["parameterValues"]) > 0:
