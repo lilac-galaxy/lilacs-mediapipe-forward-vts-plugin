@@ -9,13 +9,13 @@ Python Requirements: mediapipe, websockets, python version 3.9 - 3.12 (see [requ
 Recommend running in a virtual environment
 
 ### Venv Setup
-This was done on arch linux with the python3.12 package as mediapipe does not yet work with the current version of python 3.13 at time of writing.
+This was done on arch linux with the python3.12 package as mediapipe does not yet work with the current version of python 3.13 at time of writing. Use whichever relevant python binary with a version between 3.9 and 3.12 in place of `python3.12` below.
 ```
 $ python3.12 -m venv .venv
 ```
 This command creates a `.venv` directory  to store the virtual enviornment
 ```
-$ $ource .venv/bin/activate
+$ source .venv/bin/activate
 ```
 This sets the python version / pip version to the version inside of `.venv`. This must be run before executing any code.
 ```
