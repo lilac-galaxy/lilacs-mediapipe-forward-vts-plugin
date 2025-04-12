@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument("-c", "--camera", help="index of camera device", default=0)
     parser.add_argument("-W", "--width", help="width of camera image", default=1280)
     parser.add_argument("-H", "--height", help="height of camera image", default=720)
+    parser.add_argument("-f", "--fps", help="frame rate of the camera", default=30)
     parser.add_argument("-g", "--use_gpu", default=False, action="store_true")
     return parser.parse_args()
 
@@ -92,8 +93,12 @@ def debug_visualize(args):
     camera_id = args.camera
     width = args.width
     height = args.height
+    fps = args.fps
 
     capture = cv2.VideoCapture()
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    capture.set(cv2.CAP_PROP_FPS, fps)
     capture.open(camera_id)
     time.sleep(0.02)  # allow camera to initialize
 
@@ -101,9 +106,7 @@ def debug_visualize(args):
         print("Device not opened")
         exit(1)
 
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-    fps = capture.get(cv2.CAP_PROP_FPS)
+    fps = capture.get(cv2.CAP_PROP_FPS)  # overwrite with fps that was set
     wait_interval_sec = 0.1 / fps  # wait 10% of the time to get a frame
 
     delegate = python.BaseOptions.Delegate.CPU
