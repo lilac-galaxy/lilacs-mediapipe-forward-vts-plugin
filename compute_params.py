@@ -1,11 +1,13 @@
 import math
 from scipy.spatial.transform import Rotation
 
-BLINK_THRESHOLD = 0.4
+BLINK_THRESHOLD = 0.6
 BLINK_SCALE = 0.0
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
 MOUTH_X_SCALE = 3.0
 MOUTH_OPEN_SCALE = 3.0
+MOUTH_OPEN_OFFSET = 0.2
+MOUTH_SMILE_SCALE = 0.5
 MOUTH_SMILE_OFFSET = 0.4
 
 
@@ -22,7 +24,9 @@ def get_mouth_smile(blendshapes):
 
 
 def get_mouth_open(blendshapes):
-    return math.sqrt(min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"], 1))
+    return math.sqrt(
+        max(min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"] - MOUTH_OPEN_OFFSET, 1), 0)
+    )
 
 
 def get_mouth_x(blendshapes):
@@ -125,7 +129,9 @@ def compute_params_from_blendshapes(request, blendshape_list):
     append_request(request, "VoiceVolumePlusMouthOpen", get_mouth_open(blendshapes))
     # Mouth Smile + Volume Freq
     append_request(
-        request, "VoiceFrequencyPlusMouthSmile", get_mouth_smile(blendshapes) * 0.5
+        request,
+        "VoiceFrequencyPlusMouthSmile",
+        get_mouth_smile(blendshapes) * MOUTH_SMILE_SCALE,
     )
     # Brows
     append_request(request, "Brows", get_brows(blendshapes))
