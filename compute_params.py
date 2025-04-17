@@ -1,14 +1,99 @@
 import math
 from scipy.spatial.transform import Rotation
+from scipy.spatial import ConvexHull
+import numpy as np
 
 BLINK_THRESHOLD = 0.6
 BLINK_SCALE = 0.0
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
 MOUTH_X_SCALE = 3.0
 MOUTH_OPEN_SCALE = 3.0
-MOUTH_OPEN_OFFSET = 0.2
+MOUTH_OPEN_VOLUME_OFFSET = 0.2
+MOUTH_HULL_OFFSET = 0.035
+MOUTH_HULL_SCALE = 20.0
 MOUTH_SMILE_SCALE = 0.5
 MOUTH_SMILE_OFFSET = 0.4
+
+FACE_OVAL_LANDMARK_SET = {
+    132,
+    389,
+    136,
+    10,
+    397,
+    400,
+    148,
+    149,
+    150,
+    21,
+    152,
+    284,
+    288,
+    162,
+    297,
+    172,
+    176,
+    54,
+    58,
+    323,
+    67,
+    454,
+    332,
+    338,
+    93,
+    356,
+    103,
+    361,
+    234,
+    365,
+    109,
+    251,
+    377,
+    378,
+    379,
+    127,
+}
+LIP_LANDMARK_SET = {
+    0,
+    267,
+    269,
+    270,
+    14,
+    13,
+    17,
+    146,
+    402,
+    405,
+    409,
+    415,
+    291,
+    37,
+    39,
+    40,
+    178,
+    308,
+    181,
+    310,
+    311,
+    312,
+    185,
+    314,
+    61,
+    317,
+    318,
+    191,
+    321,
+    324,
+    78,
+    80,
+    81,
+    82,
+    84,
+    87,
+    88,
+    91,
+    95,
+    375,
+}
 
 
 def append_request(request, id, value):
@@ -24,9 +109,7 @@ def get_mouth_smile(blendshapes):
 
 
 def get_mouth_open(blendshapes):
-    return math.sqrt(
-        max(min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"] - MOUTH_OPEN_OFFSET, 1), 0)
-    )
+    return math.sqrt(max(min(MOUTH_OPEN_SCALE * blendshapes["jawOpen"], 1), 0))
 
 
 def get_mouth_x(blendshapes):
@@ -118,15 +201,50 @@ def create_blendshapes_dict(blendshape_list):
     return shapes
 
 
+def get_mouth_hull(landmarks):
+    lip_points = []
+    face_points = []
+    for idx in range(len(landmarks)):
+        landmark = landmarks[idx]
+        if idx in LIP_LANDMARK_SET:
+            lip_points.extend([landmark.x, landmark.y, landmark.z])
+        if idx in FACE_OVAL_LANDMARK_SET:
+            face_points.extend([landmark.x, landmark.y, landmark.z])
+    if len(lip_points) != (len(LIP_LANDMARK_SET) * 3):
+        return 0
+    if len(face_points) != (len(FACE_OVAL_LANDMARK_SET) * 3):
+        return 0
+    lip_point_array = np.array(lip_points).reshape((len(LIP_LANDMARK_SET), 3))
+    face_point_array = np.array(face_points).reshape((len(FACE_OVAL_LANDMARK_SET), 3))
+    lip_hull = ConvexHull(points=lip_point_array)
+    face_hull = ConvexHull(points=face_point_array)
+    # ratio of mouth hull to face oval hull should be mostly consistent across distance
+    lip_share = lip_hull.area / face_hull.area
+    lip_share_normalized = max(
+        min((MOUTH_HULL_SCALE * (lip_share - MOUTH_HULL_OFFSET)), 1), 0
+    )
+    return lip_share_normalized
+
+
+def compute_params_from_landmarks(request, face_landmarks):
+    get_mouth_hull(face_landmarks)
+    append_request(request, "MouthOpen", get_mouth_hull(face_landmarks))
+    append_request(
+        request,
+        "VoiceVolumePlusMouthOpen",
+        get_mouth_hull(face_landmarks) - MOUTH_OPEN_VOLUME_OFFSET,
+    )
+
+
 def compute_params_from_blendshapes(request, blendshape_list):
     # Note left/right switched between mediapipe and vtube studio parameters
     blendshapes = create_blendshapes_dict(blendshape_list)
     # MouthSmile
     append_request(request, "MouthSmile", get_mouth_smile(blendshapes))
     # MouthOpen
-    append_request(request, "MouthOpen", get_mouth_open(blendshapes))
+    # append_request(request, "MouthOpen", get_mouth_open(blendshapes))
     # Mouth Open + Volume
-    append_request(request, "VoiceVolumePlusMouthOpen", get_mouth_open(blendshapes))
+    # append_request(request, "VoiceVolumePlusMouthOpen", get_mouth_open(blendshapes) - MOUTH_OPEN_VOLUME_OFFSET)
     # Mouth Smile + Volume Freq
     append_request(
         request,

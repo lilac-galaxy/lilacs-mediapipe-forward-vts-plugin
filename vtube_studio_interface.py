@@ -1,7 +1,11 @@
 import json
 import sys
 
-from compute_params import compute_params_from_blendshapes, compute_params_from_matrix
+from compute_params import (
+    compute_params_from_blendshapes,
+    compute_params_from_matrix,
+    compute_params_from_landmarks,
+)
 
 
 def validate_connect_response(message_json):
@@ -70,6 +74,8 @@ def send_detection_results(detection_result, websocket):
         # Do nothing if no shapes found
         return True
     face_blendshapes = face_blendshapes_list[0]  # only care about a single face
+    face_landmarks = detection_result.face_landmarks[0]
+    compute_params_from_landmarks(request, face_landmarks)
     compute_params_from_blendshapes(request, face_blendshapes)
 
     compute_params_from_matrix(
