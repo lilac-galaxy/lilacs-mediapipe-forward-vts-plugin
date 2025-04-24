@@ -4,7 +4,7 @@ Model attained from google via
 
 `! wget -O face_landmarker_v2_with_blendshapes.task -q https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`
 
-Python Requirements: mediapipe, websockets, python version 3.9 - 3.12 (see [requirements.txt](./requirements.txt))
+Python Requirements: mediapipe, websockets, scikit-image, python version 3.9 - 3.12 (see [requirements.txt](./requirements.txt))
 
 Recommend running in a virtual environment
 
