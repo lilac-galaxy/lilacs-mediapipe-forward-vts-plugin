@@ -1,10 +1,13 @@
 import math
 from scipy.spatial.transform import Rotation
 from scipy.spatial import ConvexHull
+from skimage.measure import EllipseModel
 import numpy as np
 
 BLINK_THRESHOLD = 0.6
 BLINK_SCALE = 0.0
+CHEEK_PUFF_OFFSET = 1.7
+CHEEK_PUFF_SCALE = -5
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
 MOUTH_X_SCALE = 3.0
 MOUTH_OPEN_SCALE = 3.0
@@ -226,6 +229,29 @@ def get_mouth_hull(landmarks):
     return lip_share_normalized
 
 
+def get_cheek_puff(landmarks):
+    face_contour_points = []
+    for idx in range(len(landmarks)):
+        landmark = landmarks[idx]
+        if idx in FACE_OVAL_LANDMARK_SET:
+            face_contour_points.append((landmark.x, landmark.y))
+
+    ellipse_array = np.array(face_contour_points)
+    ell = EllipseModel()
+    ell.estimate(ellipse_array)
+    xc, yc, a, b, theta = ell.params
+
+    major_minor_ratio = a / b
+    # roughly 1.5 at min and 1.7 at max
+    major_minor_ratio_normalized = (
+        major_minor_ratio - CHEEK_PUFF_OFFSET
+    ) * CHEEK_PUFF_SCALE
+    major_minor_ratio_normalized = min(max(major_minor_ratio_normalized, 0), 1)
+
+    # square to get better default state
+    return major_minor_ratio_normalized**2
+
+
 def compute_params_from_landmarks(request, face_landmarks):
     get_mouth_hull(face_landmarks)
     append_request(request, "MouthOpen", get_mouth_hull(face_landmarks))
@@ -234,6 +260,7 @@ def compute_params_from_landmarks(request, face_landmarks):
         "VoiceVolumePlusMouthOpen",
         get_mouth_hull(face_landmarks) - MOUTH_OPEN_VOLUME_OFFSET,
     )
+    append_request(request, "CheekPuff", get_cheek_puff(face_landmarks))
 
 
 def compute_params_from_blendshapes(request, blendshape_list):

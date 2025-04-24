@@ -2,8 +2,12 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
+from mediapipe.framework.formats import landmark_pb2
+
+
 import matplotlib.pyplot as plt
 from threading import Lock
+import numpy as np
 
 import time
 import cv2
@@ -33,25 +37,27 @@ def get_args():
 # This is to prevent calls to data while it may be incomplete
 class DetectionData:
     def __init__(self):
+        self.lock = Lock()
         self.names = []
         self.scores = []
         self.image = None
         self.timestamp = 0
-        self.lock = Lock()
+        self.landmarks = []
         self.new_update = False
 
-    def update(self, names, scores, image, timestamp):
+    def update(self, names, scores, image, timestamp, landmarks):
         with self.lock:
             self.names = names
             self.scores = scores
             self.image = image
             self.timestamp = timestamp
+            self.landmarks = landmarks
             self.new_update = True
 
     def get_data(self):
         with self.lock:
             self.new_update = False
-            return (self.names, self.scores, self.image, self.timestamp)
+            return (self.names, self.scores, self.image, self.timestamp, self.landmarks)
 
     def is_new_update(self):
         return self.new_update
@@ -65,13 +71,16 @@ def visualize_results(
 ):
     if len(detection_result.face_blendshapes) > 0:
         blendshapes = detection_result.face_blendshapes[0]
+        landmarks = detection_result.face_landmarks[0]
         names = [blendshape.category_name for blendshape in blendshapes]
         scores = [blendshape.score for blendshape in blendshapes]
-        detection_data.update(names, scores, image.numpy_view(), timestamp_ms)
+        detection_data.update(
+            names, scores, image.numpy_view(), timestamp_ms, landmarks
+        )
 
 
 def update_figure(fig, axs, detection_data: DetectionData):
-    (names, scores, image, timestamp) = detection_data.get_data()
+    (names, scores, image, timestamp, landmarks) = detection_data.get_data()
     try:
         axs[0].clear()
         axs[1].clear()
@@ -85,7 +94,30 @@ def update_figure(fig, axs, detection_data: DetectionData):
     axs[0].set_xlim([0, 1])
     axs[0].barh(names, scores)
     if image is not None:
-        axs[1].imshow(image)
+        annotated_image = np.copy(image)
+        face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        face_landmarks_proto.landmark.extend(
+            [
+                landmark_pb2.NormalizedLandmark(
+                    x=landmark.x, y=landmark.y, z=landmark.z
+                )
+                for landmark in landmarks
+            ]
+        )
+
+        connections = [
+            (connection.start, connection.end)
+            for connection in vision.FaceLandmarksConnections.FACE_LANDMARKS_TESSELATION
+        ]
+
+        mp.solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=connections,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=mp.solutions.drawing_styles.get_default_face_mesh_tesselation_style(),
+        )
+        axs[1].imshow(annotated_image)
 
 
 def debug_visualize(args):
