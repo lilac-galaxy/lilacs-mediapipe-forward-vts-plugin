@@ -4,6 +4,8 @@ from mediapipe.tasks.python import vision
 
 from websockets.sync.client import connect
 
+from threading import Lock
+
 import time
 import cv2
 import os
@@ -16,6 +18,25 @@ from vtube_studio_interface import (
     send_detection_results,
 )
 from create_parameters import create_custom_parameters
+
+
+class ResultTracker:
+    def __init__(self, max_failures):
+        self.lock = Lock()
+        self.failures = 0
+        self.max_failures = max_failures
+
+    def add_failure(self):
+        with self.lock:
+            self.failures += 1
+
+    def reset(self):
+        with self.lock:
+            self.failures = 0
+
+    def is_disconnected(self):
+        with self.lock:
+            return self.failures > self.max_failures
 
 
 def get_args():
@@ -42,7 +63,17 @@ def get_args():
     parser.add_argument("-W", "--width", help="width of camera image", default=1280)
     parser.add_argument("-H", "--height", help="height of camera image", default=720)
     parser.add_argument("-f", "--fps", help="frame rate of the camera", default=30)
-    parser.add_argument("-g", "--use_gpu", default=False, action="store_true")
+    parser.add_argument("-g", "--use-gpu", default=False, action="store_true")
+    parser.add_argument(
+        "--camera-failures",
+        help="Number of failed frames to grab before quitting",
+        default=5,
+    )
+    parser.add_argument(
+        "--websocket-failures",
+        help="Number of failed communications to vtube studio before quitting",
+        default=5,
+    )
     return parser.parse_args()
 
 
@@ -66,6 +97,7 @@ def main(auth_token, args):
         exit(1)
 
     attempts = 0
+    result_tracker = ResultTracker(args.websocket_failures)
 
     with connect(args.address) as websocket:
         # authenticate session
@@ -82,7 +114,11 @@ def main(auth_token, args):
             image: mp.Image,
             timestamp_ms: int,
         ):
-            send_detection_results(detection_result, websocket)
+            result = send_detection_results(detection_result, websocket)
+            if result != True:
+                result_tracker.add_failure()
+            else:
+                result_tracker.reset()
 
         delagate = python.BaseOptions.Delegate.CPU
         if args.use_gpu:
@@ -110,6 +146,10 @@ def main(auth_token, args):
                 # Load image
                 ret, cv2_image = capture.read()
 
+                if result_tracker.is_disconnected():
+                    print("No longer recieving from server, disconnecting!")
+                    break
+
                 if ret:
                     attempts = 0
                     image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2_image)
@@ -118,8 +158,8 @@ def main(auth_token, args):
                 else:
                     attempts += 1
                     time.sleep(wait_interval_sec)
-                if attempts > 30:
-                    print("Too many failed attempts, quitting")
+                if attempts > args.camera_failures:
+                    print("Too many failed attempts getting camera image, quitting")
                     break
         except KeyboardInterrupt:
             print("Quitting")
