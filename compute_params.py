@@ -1,102 +1,17 @@
 import math
 from scipy.spatial.transform import Rotation
-from scipy.spatial import ConvexHull
-from skimage.measure import EllipseModel
-import numpy as np
+
+from compute_landmark_params import LandmarkParamsComputer
 
 BLINK_THRESHOLD = 0.6
 BLINK_SCALE = 0.0
-CHEEK_PUFF_OFFSET = 1.7
-CHEEK_PUFF_SCALE = -3.5
+
 EYE_SQUINT_TO_OPEN_RATIO = -0.2
 MOUTH_X_SCALE = 3.0
 MOUTH_OPEN_SCALE = 3.0
 MOUTH_OPEN_VOLUME_OFFSET = 0.2
-MOUTH_HULL_OFFSET = 0.035
-MOUTH_HULL_SCALE = 20.0
 MOUTH_SMILE_SCALE = 0.5
 MOUTH_SMILE_OFFSET = 0.4
-
-FACE_OVAL_LANDMARK_SET = {
-    132,
-    389,
-    136,
-    10,
-    397,
-    400,
-    148,
-    149,
-    150,
-    21,
-    152,
-    284,
-    288,
-    162,
-    297,
-    172,
-    176,
-    54,
-    58,
-    323,
-    67,
-    454,
-    332,
-    338,
-    93,
-    356,
-    103,
-    361,
-    234,
-    365,
-    109,
-    251,
-    377,
-    378,
-    379,
-    127,
-}
-LIP_LANDMARK_SET = {
-    0,
-    267,
-    269,
-    270,
-    14,
-    13,
-    17,
-    146,
-    402,
-    405,
-    409,
-    415,
-    291,
-    37,
-    39,
-    40,
-    178,
-    308,
-    181,
-    310,
-    311,
-    312,
-    185,
-    314,
-    61,
-    317,
-    318,
-    191,
-    321,
-    324,
-    78,
-    80,
-    81,
-    82,
-    84,
-    87,
-    88,
-    91,
-    95,
-    375,
-}
 
 
 def append_request(request, id, value):
@@ -204,63 +119,17 @@ def create_blendshapes_dict(blendshape_list):
     return shapes
 
 
-def get_mouth_hull(landmarks):
-    lip_points = []
-    face_points = []
-    for idx in range(len(landmarks)):
-        landmark = landmarks[idx]
-        if idx in LIP_LANDMARK_SET:
-            lip_points.extend([landmark.x, landmark.y, landmark.z])
-        if idx in FACE_OVAL_LANDMARK_SET:
-            face_points.extend([landmark.x, landmark.y, landmark.z])
-    if len(lip_points) != (len(LIP_LANDMARK_SET) * 3):
-        return 0
-    if len(face_points) != (len(FACE_OVAL_LANDMARK_SET) * 3):
-        return 0
-    lip_point_array = np.array(lip_points).reshape((len(LIP_LANDMARK_SET), 3))
-    face_point_array = np.array(face_points).reshape((len(FACE_OVAL_LANDMARK_SET), 3))
-    lip_hull = ConvexHull(points=lip_point_array)
-    face_hull = ConvexHull(points=face_point_array)
-    # ratio of mouth hull to face oval hull should be mostly consistent across distance
-    lip_share = lip_hull.area / face_hull.area
-    lip_share_normalized = max(
-        min((MOUTH_HULL_SCALE * (lip_share - MOUTH_HULL_OFFSET)), 1), 0
-    )
-    return lip_share_normalized
-
-
-def get_cheek_puff(landmarks):
-    face_contour_points = []
-    for idx in range(len(landmarks)):
-        landmark = landmarks[idx]
-        if idx in FACE_OVAL_LANDMARK_SET:
-            face_contour_points.append((landmark.x, landmark.y))
-
-    ellipse_array = np.array(face_contour_points)
-    ell = EllipseModel()
-    ell.estimate(ellipse_array)
-    xc, yc, a, b, theta = ell.params
-
-    major_minor_ratio = a / b
-    # roughly 1.5 at min and 1.7 at max
-    major_minor_ratio_normalized = (
-        major_minor_ratio - CHEEK_PUFF_OFFSET
-    ) * CHEEK_PUFF_SCALE
-    major_minor_ratio_normalized = min(max(major_minor_ratio_normalized, 0), 1)
-
-    # square to get better default state
-    return major_minor_ratio_normalized**2
-
-
 def compute_params_from_landmarks(request, face_landmarks):
-    get_mouth_hull(face_landmarks)
-    append_request(request, "MouthOpen", get_mouth_hull(face_landmarks))
+    params_computer = LandmarkParamsComputer(face_landmarks)
+    append_request(request, "MouthOpen", params_computer.get_mouth_hull())
     append_request(
         request,
         "VoiceVolumePlusMouthOpen",
-        get_mouth_hull(face_landmarks) - MOUTH_OPEN_VOLUME_OFFSET,
+        params_computer.get_mouth_hull() - MOUTH_OPEN_VOLUME_OFFSET,
     )
-    append_request(request, "CheekPuff", get_cheek_puff(face_landmarks))
+    append_request(request, "CheekPuff", params_computer.get_cheek_puff())
+    append_request(request, "EyeOpenRight", params_computer.get_eye_left_open())
+    append_request(request, "EyeOpenLeft", params_computer.get_eye_right_open())
 
 
 def compute_params_from_blendshapes(request, blendshape_list):
@@ -285,9 +154,9 @@ def compute_params_from_blendshapes(request, blendshape_list):
     # BrowRightY
     append_request(request, "BrowRightY", get_brows_left_y(blendshapes))
     # EyeOpenLeft
-    append_request(request, "EyeOpenLeft", get_eye_open_right(blendshapes))
+    # append_request(request, "EyeOpenLeft", get_eye_open_right(blendshapes))
     # EyeOpenRight
-    append_request(request, "EyeOpenRight", get_eye_open_left(blendshapes))
+    # append_request(request, "EyeOpenRight", get_eye_open_left(blendshapes))
     # EyeLeftX
     append_request(request, "EyeLeftX", get_eye_right_x(blendshapes))
     # EyeLeftY
