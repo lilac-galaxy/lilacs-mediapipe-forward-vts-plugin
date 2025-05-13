@@ -169,10 +169,11 @@ def main(auth_token, args):
 if __name__ == "__main__":
     args = get_args()
 
+    auth_token = ""
     if os.path.isfile(args.auth_file):
         with open("auth.json", "r") as auth_file:
             auth_data = json.load(auth_file)
             auth_token = auth_data["auth_token"]
     if auth_token == "":
-        auth_token = create_custom_parameters(auth_token)
+        auth_token = create_custom_parameters(auth_token, args.auth_file)
     main(auth_token, args)

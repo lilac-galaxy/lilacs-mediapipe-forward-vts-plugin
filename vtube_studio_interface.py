@@ -18,7 +18,7 @@ def validate_connect_response(message_json):
         sys.exit(1)
 
 
-def get_authentication_token(websocket):
+def get_authentication_token(websocket, auth_file=""):
     request = {
         "apiName": "VTubeStudioPublicAPI",
         "apiVersion": "1.0",
@@ -34,8 +34,8 @@ def get_authentication_token(websocket):
     websocket.send(request_json)
     response_json = websocket.recv()
     response = json.loads(response_json)
-    if response["messageType"] == "AuthenticationTokenResponse":
-        with open("auth_key.json", "w") as auth_json:
+    if response["messageType"] == "AuthenticationTokenResponse" and auth_file != "":
+        with open(auth_file, "w") as auth_json:
             auth_data = {"auth_token": response["data"]["authenticationToken"]}
             auth_json.write(json.dumps(auth_data))
         return response["data"]["authenticationToken"]

@@ -32,13 +32,13 @@ def create_parameter(websocket, name, description, min_val, max_val, default_val
     print(json.loads(response_json))
 
 
-def create_custom_parameters(auth_token=""):
+def create_custom_parameters(auth_token="", auth_file="auth.json"):
 
     with connect("ws://localhost:8001") as websocket:
         # authenticate session
         try:
             if auth_token == "":
-                auth_token = get_authentication_token(websocket)
+                auth_token = get_authentication_token(websocket, auth_file)
             vtube_studio_authenticate(websocket, auth_token)
         except:
             print("Unable to authorize")
@@ -62,6 +62,7 @@ def create_custom_parameters(auth_token=""):
             default_val=0,
         )
         create_parameter(
+            websocket,
             "lilac_BrowsRightForm",
             "mediapipe mouthX",
             min_val=-1,
