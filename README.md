@@ -1,3 +1,5 @@
+## Note: This project is being replaced by my [updated tracker program](https://github.com/lilac-galaxy/lilacs-vts-tracker). This was originally just something to see if I could write a plugin and properly track. The new one has a nice debug interface and a slightly nicer architecture.
+
 # Lilac's VTube Studio Plugin for Forwarding Mediapipe Data
 
 Model attained from google via
