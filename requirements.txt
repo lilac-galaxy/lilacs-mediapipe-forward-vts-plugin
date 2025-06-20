@@ -19,7 +19,7 @@ opencv-contrib-python==4.11.0.86
 opt_einsum==3.4.0
 packaging==24.2
 pillow==11.1.0
-protobuf==4.25.6
+protobuf==4.25.8
 pycparser==2.22
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
